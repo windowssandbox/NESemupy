@@ -1861,9 +1861,40 @@ instructions = {
     
 }
 
-def isoc(id):
-    global opcode
-    return opcode == id
+INSTRUCTION_TABLE = [
+    BRK, ORA_IND_X, None, SLO_IND_X, None, ORA_ZP, ASL_ZP, SLO_ZP,  # 0x0-0x7
+    PHP, ORA_IMM, ASL_A, None, addr_abs, ORA_ABS, ASL_ABS, SLO_ABS,  # 0x8-0xf
+    BPL, ORA_IND_Y, None, SLO_IND_Y, None, ORA_ZP_X, ASL_ZP_X, SLO_ZP_X,  # 0x10-0x17
+    CLC, ORA_ABS_Y, None, SLO_ABS_Y, None, ORA_ABS_X, ASL_ABS_X, SLO_ABS_X,  # 0x18-0x1f
+    JSR, AND_IND_X, None, RLA_IND_X, BIT_ZP, AND_ZP, ROL_ZP, RLA_ZP,  # 0x20-0x27
+    PLP, AND_IMM, ROL_A, None, BIT_ABS, AND_ABS, ROL_ABS, RLA_ABS,  # 0x28-0x2f
+    BMI, AND_IND_Y, None, RLA_IND_Y, None, AND_ZP_X, ROL_ZP_X, RLA_ZP_X,  # 0x30-0x37
+    SEC, AND_ABS_Y, None, RLA_ABS_Y, None, AND_ABS_X, ROL_ABS_X, RLA_ABS_X,  # 0x38-0x3f
+    RTI, EOR_IND_X, None, SRE_IND_X, None, EOR_ZP, LSR_ZP, SRE_ZP,  # 0x40-0x47
+    PHA, EOR_IMM, LSR_A, None, JMP_ABS, EOR_ABS, LSR_ABS, SRE_ABS,  # 0x48-0x4f
+    BVC, EOR_IND_Y, None, SRE_IND_Y, None, EOR_ZP_X, LSR_ZP_X, SRE_ZP_X,  # 0x50-0x57
+    CLI, EOR_ABS_Y, None, SRE_ABS_Y, None, EOR_ABS_X, LSR_ABS_X, SRE_ABS_X,  # 0x58-0x5f
+    RTS, ADC_IND_X, None, RRA_IND_X, None, ADC_ZP, ROR_ZP, RRA_ZP,  # 0x60-0x67
+    PLA, ADC_IMM, ROR_A, None, JMP_IND, ADC_ABS, ROR_ABS, RRA_ABS,  # 0x68-0x6f
+    BVS, ADC_IND_Y, None, RRA_IND_Y, None, ADC_ZP_X, ROR_ZP_X, RRA_ZP_X,  # 0x70-0x77
+    SEI, ADC_ABS_Y, None, RRA_ABS_Y, None, ADC_ABS_X, ROR_ABS_X, RRA_ABS_X,  # 0x78-0x7f
+    None, STA_IND_X, None, SAX_IND_X, STY_ZP, STA_ZP, STX_ZP, SAX_ZP,  # 0x80-0x87
+    DEY, None, TXA, None, STY_ABS, STA_ABS, STX_ABS, SAX_ABS,  # 0x88-0x8f
+    BCC, STA_IND_Y, None, None, STY_ZP_X, STA_ZP_X, STX_ZP_Y, SAX_ZP_Y,  # 0x90-0x97
+    TYA, STA_ABS_Y, TXS, None, None, STA_ABS_X, None, None,  # 0x98-0x9f
+    LDY_IMM, LDA_IND_X, LDX_IMM, LAX_IND_X, LDY_ZP, LDA_ZP, LDX_ZP, LAX_ZP,  # 0xa0-0xa7
+    TAY, LDA_IMM, TAX, None, LDY_ABS, LDA_ABS, LDX_ABS, LAX_ABS,  # 0xa8-0xaf
+    BCS, LDA_IND_Y, None, LAX_IND_Y, LDY_ZP_X, LDA_ZP_X, LDX_ZP_Y, LAX_ZP_Y,  # 0xb0-0xb7
+    CLV, LDA_ABS_Y, TSX, None, LDY_ABS_X, LDA_ABS_X, LDX_ABS_Y, LAX_ABS_Y,  # 0xb8-0xbf
+    CPY_IMM, CMP_IND_X, None, DCP_IND_X, CPY_ZP, CMP_ZP, DEC_ZP, DCP_ZP,  # 0xc0-0xc7
+    INY, CMP_IMM, DEX, None, CPY_ABS, CMP_ABS, DEC_ABS, DCP_ABS,  # 0xc8-0xcf
+    BNE, CMP_IND_Y, None, DCP_IND_Y, None, CMP_ZP_X, DEC_ZP_X, DCP_ZP_Y,  # 0xd0-0xd7
+    CLD, CMP_ABS_Y, None, DCP_ABS_Y, None, CMP_ABS_X, DEC_ABS_X, DCP_ABS_X,  # 0xd8-0xdf
+    CPX_IMM, SBC_IND_X, None, ISC_IND_X, CPX_ZP, SBC_ZP, INC_ZP, ISC_ZP,  # 0xe0-0xe7
+    INX, SBC_IMM, NOP, SBC_IMM, CPX_ABS, SBC_ABS, INC_ABS, ISC_ABS,  # 0xe8-0xef
+    BEQ, SBC_IND_Y, None, ISC_IND_Y, None, SBC_ZP_X, INC_ZP_X, ISC_ZP_X,  # 0xf0-0xf7
+    SED, SBC_ABS_Y, None, ISC_ABS_Y, None, SBC_ABS_X, INC_ABS_X, ISC_ABS_X,  # 0xf8-0xff
+]
 
 def getop(id):
     global opcode
@@ -1896,229 +1927,15 @@ def step_cpu():
     cpu_cycles += 1
     pgc = 1
     
-    # ..and execute opcode i guess
-    # legal opcodes:
-    if isoc(0x00): BRK()
-    elif isoc(0x01): ORA_IND_X()
-    elif isoc(0x05): ORA_ZP()
-    elif isoc(0x06): ASL_ZP()
-    elif isoc(0x08): PHP()
-    elif isoc(0x09): ORA_IMM()
-    elif isoc(0x0A): ASL_A()
-    elif isoc(0x0D): ORA_ABS()
-    elif isoc(0x0E): ASL_ABS()
-    elif isoc(0x10): BPL()
-    elif isoc(0x11): ORA_IND_Y()
-    elif isoc(0x15): ORA_ZP_X()
-    elif isoc(0x16): ASL_ZP_X()
-    elif isoc(0x18): CLC()
-    elif isoc(0x19): ORA_ABS_Y()
-    elif isoc(0x1D): ORA_ABS_X()
-    elif isoc(0x1E): ASL_ABS_X()
-    elif isoc(0x20): JSR()
-    elif isoc(0x21): AND_IND_X()
-    elif isoc(0x24): BIT_ZP()
-    elif isoc(0x25): AND_ZP()
-    elif isoc(0x26): ROL_ZP()
-    elif isoc(0x28): PLP()
-    elif isoc(0x29): AND_IMM()
-    elif isoc(0x2A): ROL_A()
-    elif isoc(0x2C): BIT_ABS()
-    elif isoc(0x2D): AND_ABS()
-    elif isoc(0x2E): ROL_ABS()
-    elif isoc(0x30): BMI()
-    elif isoc(0x31): AND_IND_Y()
-    elif isoc(0x35): AND_ZP_X()
-    elif isoc(0x36): ROL_ZP_X()
-    elif isoc(0x38): SEC()
-    elif isoc(0x39): AND_ABS_Y()
-    elif isoc(0x3D): AND_ABS_X()
-    elif isoc(0x3E): ROL_ABS_X()
-    elif isoc(0x40): RTI()
-    elif isoc(0x41): EOR_IND_X()
-    elif isoc(0x45): EOR_ZP()
-    elif isoc(0x46): LSR_ZP()
-    elif isoc(0x48): PHA()
-    elif isoc(0x49): EOR_IMM()
-    elif isoc(0x4A): LSR_A()
-    elif isoc(0x4C): JMP_ABS()
-    elif isoc(0x4D): EOR_ABS()
-    elif isoc(0x4E): LSR_ABS()
-    elif isoc(0x50): BVC()
-    elif isoc(0x51): EOR_IND_Y()
-    elif isoc(0x55): EOR_ZP_X()
-    elif isoc(0x56): LSR_ZP_X()
-    elif isoc(0x58): CLI()
-    elif isoc(0x59): EOR_ABS_Y()
-    elif isoc(0x5D): EOR_ABS_X()
-    elif isoc(0x5E): LSR_ABS_X()
-    elif isoc(0x60): RTS()
-    elif isoc(0x61): ADC_IND_X()
-    elif isoc(0x65): ADC_ZP()
-    elif isoc(0x66): ROR_ZP()
-    elif isoc(0x68): PLA()
-    elif isoc(0x69): ADC_IMM()
-    elif isoc(0x6A): ROR_A()
-    elif isoc(0x6C): JMP_IND()
-    elif isoc(0x6D): ADC_ABS()
-    elif isoc(0x6E): ROR_ABS()
-    elif isoc(0x70): BVS()
-    elif isoc(0x71): ADC_IND_Y()
-    elif isoc(0x75): ADC_ZP_X()
-    elif isoc(0x76): ROR_ZP_X()
-    elif isoc(0x78): SEI()
-    elif isoc(0x79): ADC_ABS_Y()
-    elif isoc(0x7D): ADC_ABS_X()
-    elif isoc(0x7E): ROR_ABS_X()
-    elif isoc(0x81): STA_IND_X()
-    elif isoc(0x84): STY_ZP()
-    elif isoc(0x85): STA_ZP()
-    elif isoc(0x86): STX_ZP()
-    elif isoc(0x88): DEY()
-    elif isoc(0x8A): TXA()
-    elif isoc(0x8C): STY_ABS()
-    elif isoc(0x8D): STA_ABS()
-    elif isoc(0x8E): STX_ABS()
-    elif isoc(0x90): BCC()
-    elif isoc(0x91): STA_IND_Y()
-    elif isoc(0x94): STY_ZP_X()
-    elif isoc(0x95): STA_ZP_X()
-    elif isoc(0x96): STX_ZP_Y()
-    elif isoc(0x98): TYA()
-    elif isoc(0x99): STA_ABS_Y()
-    elif isoc(0x9A): TXS()
-    elif isoc(0x9D): STA_ABS_X()
-    elif isoc(0xA0): LDY_IMM()
-    elif isoc(0xA1): LDA_IND_X()
-    elif isoc(0xA2): LDX_IMM()
-    elif isoc(0xA4): LDY_ZP()
-    elif isoc(0xA5): LDA_ZP()
-    elif isoc(0xA6): LDX_ZP()
-    elif isoc(0xA8): TAY()
-    elif isoc(0xA9): LDA_IMM()
-    elif isoc(0xAA): TAX()
-    elif isoc(0xAC): LDY_ABS()
-    elif isoc(0xAD): LDA_ABS()
-    elif isoc(0xAE): LDX_ABS()
-    elif isoc(0xB0): BCS()
-    elif isoc(0xB1): LDA_IND_Y()
-    elif isoc(0xB4): LDY_ZP_X()
-    elif isoc(0xB5): LDA_ZP_X()
-    elif isoc(0xB6): LDX_ZP_Y()
-    elif isoc(0xB8): CLV()
-    elif isoc(0xB9): LDA_ABS_Y()
-    elif isoc(0xBA): TSX()
-    elif isoc(0xBC): LDY_ABS_X()
-    elif isoc(0xBD): LDA_ABS_X()
-    elif isoc(0xBE): LDX_ABS_Y()
-    elif isoc(0xC0): CPY_IMM()
-    elif isoc(0xC1): CMP_IND_X()
-    elif isoc(0xC4): CPY_ZP()
-    elif isoc(0xC5): CMP_ZP()
-    elif isoc(0xC6): DEC_ZP()
-    elif isoc(0xC8): INY()
-    elif isoc(0xC9): CMP_IMM()
-    elif isoc(0xCA): DEX()
-    elif isoc(0xCC): CPY_ABS()
-    elif isoc(0xCD): CMP_ABS()
-    elif isoc(0xCE): DEC_ABS()
-    elif isoc(0xD0): BNE()
-    elif isoc(0xD1): CMP_IND_Y()
-    elif isoc(0xD5): CMP_ZP_X()
-    elif isoc(0xD6): DEC_ZP_X()
-    elif isoc(0xD8): CLD()
-    elif isoc(0xD9): CMP_ABS_Y()
-    elif isoc(0xDD): CMP_ABS_X()
-    elif isoc(0xDE): DEC_ABS_X()
-    elif isoc(0xE0): CPX_IMM()
-    elif isoc(0xE1): SBC_IND_X()
-    elif isoc(0xE4): CPX_ZP()
-    elif isoc(0xE5): SBC_ZP()
-    elif isoc(0xE6): INC_ZP()
-    elif isoc(0xE8): INX()
-    elif isoc(0xE9): SBC_IMM()
-    elif isoc(0xEA): NOP()
-    elif isoc(0xEC): CPX_ABS()
-    elif isoc(0xED): SBC_ABS()
-    elif isoc(0xEE): INC_ABS()
-    elif isoc(0xF0): BEQ()
-    elif isoc(0xF1): SBC_IND_Y()
-    elif isoc(0xF5): SBC_ZP_X()
-    elif isoc(0xF6): INC_ZP_X()
-    elif isoc(0xF8): SED()
-    elif isoc(0xF9): SBC_ABS_Y()
-    elif isoc(0xFD): SBC_ABS_X()
-    elif isoc(0xFE): INC_ABS_X()
-    
-    # illegal opcodes:
-    elif isoc(0x04): _=addr_zp(); cpu_read(_)
-    elif opcode in [0x1A, 0x3A, 0x5A, 0x7A, 0xDA, 0xFA]: inc_cycle()
-    elif opcode in [0x14, 0x34, 0x44, 0x54, 0x64, 0x74, 0xD4, 0xF4]: addr_zpX()
-    elif isoc(0x0C): addr_abs(); inc_cycle()
-    elif opcode in [0x1C, 0x3C, 0x5C, 0x7C, 0xDC, 0xFC]: addr_absX()
-    elif opcode in [0x80, 0x82, 0x89, 0xC2, 0xE2]: cpu_read(PC); inc_PC()
-    elif isoc(0xA3): LAX_IND_X()
-    elif isoc(0xA7): LAX_ZP()
-    elif isoc(0xB7): LAX_ZP_Y()
-    elif isoc(0xAF): LAX_ABS()
-    elif isoc(0xBF): LAX_ABS_Y()
-    elif isoc(0xB3): LAX_IND_Y()
-    elif isoc(0x83): SAX_IND_X()
-    elif isoc(0x87): SAX_ZP()
-    elif isoc(0x97): SAX_ZP_Y()
-    elif isoc(0x8F): SAX_ABS()
-    elif isoc(0xEB): SBC_IMM()
-    elif isoc(0xC3): DCP_IND_X()
-    elif isoc(0xC7): DCP_ZP()
-    elif isoc(0xD7): DCP_ZP_Y()
-    elif isoc(0xCF): DCP_ABS()
-    elif isoc(0xDF): DCP_ABS_X()
-    elif isoc(0xDB): DCP_ABS_Y()
-    elif isoc(0xD3): DCP_IND_Y()
-    elif isoc(0xE3): ISC_IND_X()
-    elif isoc(0xE7): ISC_ZP()
-    elif isoc(0xF7): ISC_ZP_X()
-    elif isoc(0xEF): ISC_ABS()
-    elif isoc(0xFF): ISC_ABS_X()
-    elif isoc(0xFB): ISC_ABS_Y()
-    elif isoc(0xF3): ISC_IND_Y()
-    elif isoc(0x03): SLO_IND_X()
-    elif isoc(0x07): SLO_ZP()
-    elif isoc(0x17): SLO_ZP_X()
-    elif isoc(0x0F): SLO_ABS()
-    elif isoc(0x1F): SLO_ABS_X()
-    elif isoc(0x1B): SLO_ABS_Y()
-    elif isoc(0x13): SLO_IND_Y()
-    elif isoc(0x23): RLA_IND_X()
-    elif isoc(0x27): RLA_ZP()
-    elif isoc(0x37): RLA_ZP_X()
-    elif isoc(0x2F): RLA_ABS()
-    elif isoc(0x3F): RLA_ABS_X()
-    elif isoc(0x3B): RLA_ABS_Y()
-    elif isoc(0x33): RLA_IND_Y()
-    elif isoc(0x43): SRE_IND_X()
-    elif isoc(0x47): SRE_ZP()
-    elif isoc(0x57): SRE_ZP_X()
-    elif isoc(0x4F): SRE_ABS()
-    elif isoc(0x5F): SRE_ABS_X()
-    elif isoc(0x5B): SRE_ABS_Y()
-    elif isoc(0x53): SRE_IND_Y()
-    elif isoc(0x63): RRA_IND_X()
-    elif isoc(0x67): RRA_ZP()
-    elif isoc(0x77): RRA_ZP_X()
-    elif isoc(0x6F): RRA_ABS()
-    elif isoc(0x7F): RRA_ABS_X()
-    elif isoc(0x7B): RRA_ABS_Y()
-    elif isoc(0x73): RRA_IND_Y()
-    
-    # invalid:
-    else:
+    if INSTRUCTION_TABLE[opcode] == None:
         em = "fatal error: illegal instruction"
         print(em)
         CYCLES_PER_FRAME = 0
         if not debug_mode:
             input("press enter to exit")
             sys.exit(0)
+    # ..and execute opcode i guess
+    INSTRUCTION_TABLE[opcode]()
     
     how_many_cycles_took_after = cpu_cycles
     cpu_cycles_took_for_opcode = how_many_cycles_took_after - how_many_cycles_took_before
